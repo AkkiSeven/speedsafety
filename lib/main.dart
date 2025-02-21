@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -31,20 +33,24 @@ class DistanceCalculator extends StatefulWidget {
   _DistanceCalculatorState createState() => _DistanceCalculatorState();
 }
 
-class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProviderStateMixin { // Needed for AnimationController
+class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProviderStateMixin {
   double speed = 0;
   final double reactionTime = 2.5;
 
   double get recommendedDistance => speed * reactionTime;
+
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
+
+  late AnimationController _carMoveController; // New AnimationController
+  late Animation<double> _carMoveAnimation; // New Animation
 
   @override
   void initState() {
     super.initState();
 
     _shakeController = AnimationController(
-      duration: const Duration(milliseconds: 200), // Quick shake
+      duration: const Duration(milliseconds: 200),
       vsync: this,
     );
 
@@ -53,15 +59,50 @@ class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProv
       curve: Curves.easeInOut,
     ));
 
-    _shakeController.repeat(reverse: true); // Repeat animation indefinitely
+    _shakeController.repeat(reverse: true);
+
+    // Car movement AnimationController
+    _carMoveController = AnimationController(
+      duration: const Duration(milliseconds: 500), // Adjust for desired speed
+      vsync: this,
+    );
+
+    _carMoveAnimation = Tween<double>(begin: 0, end: 5).animate(CurvedAnimation( // Adjust range as needed
+      parent: _carMoveController,
+      curve: Curves.linear,
+    ));
+
+    _carMoveController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _carMoveController.reverse();
+      } else if (status == AnimationStatus.dismissed) {
+        _carMoveController.forward();
+      }
+    });
+  }
+
+    @override
+  void didUpdateWidget(covariant DistanceCalculator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (speed > 0) {
+      if (!_shakeController.isAnimating) {
+          _shakeController.repeat(reverse: true);
+      }
+      if (!_carMoveController.isAnimating) { //added these
+         _carMoveController.forward(); //added these
+      }
+    } else {
+      _shakeController.stop();
+      _carMoveController.stop();
+    }
   }
 
   @override
   void dispose() {
-    _shakeController.dispose(); // Important to dispose of AnimationController
+    _shakeController.dispose();
+    _carMoveController.dispose(); // Added dispose
     super.dispose();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -115,9 +156,9 @@ class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProv
               child: Column(
                 children: [
                   const SizedBox(height: 20),
-                  Text(
+                  const Text(
                     'Recommended Distance:',
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w400, color: Colors.black),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w400, color: Colors.black),
                   ),
                   const SizedBox(height: 10),
                   Text(
@@ -141,7 +182,7 @@ class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProv
                         ],
                       ),
                       child: Stack(
-                        clipBehavior: Clip.none, // Add this line to prevent clipping
+                        clipBehavior: Clip.none,
                         alignment: Alignment.center,
                         children: [
                           // Vertical Light Gray Road
@@ -154,23 +195,37 @@ class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProv
                             ),
                           ),
 
-                           // Arrow from Front Car (Dark Blue)
-                          Positioned(
-                            top: 250, // Below the car
-                            left: 425,
-                            child: Transform.rotate( // added Transform.rotate
-                              angle: 0.5*3.14159265, // added rotation
-                              child: Container( // Increased the arrow size
-                                width: 75,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: Colors.indigo[700],
-                                  borderRadius: BorderRadius.circular(4),
+                          // Back Car (Black) - now animated
+                           AnimatedBuilder(
+                            animation: _carMoveAnimation,
+                            builder: (context, child) {
+                              return Positioned(
+                                bottom: 100 + _carMoveAnimation.value, // Apply animation
+                                child: SvgPicture.asset(
+                                  'media/car.svg',
+                                  height: 80,
+                                  width: 80,
+                                  color: Colors.black,
                                 ),
-                              ),
-                            ),
+                              );
+                            },
                           ),
 
+                          // Front Car (Dark Blue) - now animated
+                          AnimatedBuilder(
+                            animation: _carMoveAnimation,
+                            builder: (context, child) {
+                              return Positioned(
+                                top: 100 + _carMoveAnimation.value, // Apply animation
+                                child: SvgPicture.asset(
+                                  'media/car.svg',
+                                  height: 80,
+                                  width: 80,
+                                  color: Colors.indigo[700],
+                                ),
+                              );
+                            },
+                          ),
                           // Text Box in the Middle
                           Positioned(
                             top: 300,
@@ -187,48 +242,10 @@ class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProv
                               ),
                             ),
                           ),
-
-                          // Arrow from Bottom Car (Black)
-                          Positioned(
-                            bottom: 250, // Above the car
-                            left: 425,
-                            child: Transform.rotate(
-                              angle: 2.5*3.14159265,
-                              child: Container( // Increased the arrow size
-                                width: 75,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: Colors.black,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                            ),
-                          ),
-                          // Back Car (Black)
-                          Positioned(
-                            bottom: 100,
-                            child: SvgPicture.asset(
-                              'media/car.svg',
-                              height: 80,
-                              width: 80,
-                              color: Colors.black,
-                            ),
-                          ),
-
-                          // Front Car (Dark Blue)
-                          Positioned(
-                            top: 100,
-                            child: SvgPicture.asset(
-                              'media/car.svg',
-                              height: 80,
-                              width: 80,
-                              color: Colors.indigo[700],
-                            ),
-                          ),
                              // Analog Speedometer in the bottom right corner
                           Positioned(
-                            bottom: 30, // move down
-                            right: 30, // move right
+                            bottom: 300, // move down
+                            right: 950, // move right
                             child: SizedBox(
                               width: 150, // increase size to 150
                               height: 150,
@@ -254,7 +271,7 @@ class AnalogSpeedometer extends StatelessWidget {
   final double speed;
   final Animation<double> shakeAnimation;
 
-  const AnalogSpeedometer({Key? key, required this.speed, required this.shakeAnimation}) : super(key: key);
+  const AnalogSpeedometer({super.key, required this.speed, required this.shakeAnimation});
 
   @override
   Widget build(BuildContext context) {
