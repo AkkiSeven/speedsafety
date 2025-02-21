@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -30,11 +31,37 @@ class DistanceCalculator extends StatefulWidget {
   _DistanceCalculatorState createState() => _DistanceCalculatorState();
 }
 
-class _DistanceCalculatorState extends State<DistanceCalculator> {
+class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProviderStateMixin { // Needed for AnimationController
   double speed = 0;
   final double reactionTime = 2.5;
 
   double get recommendedDistance => speed * reactionTime;
+  late AnimationController _shakeController;
+  late Animation<double> _shakeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _shakeController = AnimationController(
+      duration: const Duration(milliseconds: 200), // Quick shake
+      vsync: this,
+    );
+
+    _shakeAnimation = Tween<double>(begin: -0.01, end: 0.01).animate(CurvedAnimation(
+      parent: _shakeController,
+      curve: Curves.easeInOut,
+    ));
+
+    _shakeController.repeat(reverse: true); // Repeat animation indefinitely
+  }
+
+  @override
+  void dispose() {
+    _shakeController.dispose(); // Important to dispose of AnimationController
+    super.dispose();
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -114,6 +141,7 @@ class _DistanceCalculatorState extends State<DistanceCalculator> {
                         ],
                       ),
                       child: Stack(
+                        clipBehavior: Clip.none, // Add this line to prevent clipping
                         alignment: Alignment.center,
                         children: [
                           // Vertical Light Gray Road
@@ -131,8 +159,15 @@ class _DistanceCalculatorState extends State<DistanceCalculator> {
                             top: 250, // Below the car
                             left: 425,
                             child: Transform.rotate( // added Transform.rotate
-                              angle: 3.5*3.14159265, // added rotation
-                              child: Icon(Icons.arrow_forward, color: Colors.indigo[700], size: 30), //changed to arrow_forward
+                              angle: 0.5*3.14159265, // added rotation
+                              child: Container( // Increased the arrow size
+                                width: 75,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: Colors.indigo[700],
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
                             ),
                           ),
 
@@ -158,8 +193,15 @@ class _DistanceCalculatorState extends State<DistanceCalculator> {
                             bottom: 250, // Above the car
                             left: 425,
                             child: Transform.rotate(
-                              angle: 3.5*3.14159265,
-                              child: Icon(Icons.arrow_back, color: Colors.black, size: 30), // 
+                              angle: 2.5*3.14159265,
+                              child: Container( // Increased the arrow size
+                                width: 75,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: Colors.black,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
                             ),
                           ),
                           // Back Car (Black)
@@ -183,6 +225,16 @@ class _DistanceCalculatorState extends State<DistanceCalculator> {
                               color: Colors.indigo[700],
                             ),
                           ),
+                             // Analog Speedometer in the bottom right corner
+                          Positioned(
+                            bottom: 30, // move down
+                            right: 30, // move right
+                            child: SizedBox(
+                              width: 150, // increase size to 150
+                              height: 150,
+                              child: AnalogSpeedometer(speed: speed, shakeAnimation: _shakeAnimation),
+                            ),
+                          ),
 
                         ],
                       ),
@@ -195,5 +247,96 @@ class _DistanceCalculatorState extends State<DistanceCalculator> {
         ),
       ),
     );
+  }
+}
+
+class AnalogSpeedometer extends StatelessWidget {
+  final double speed;
+  final Animation<double> shakeAnimation;
+
+  const AnalogSpeedometer({Key? key, required this.speed, required this.shakeAnimation}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: shakeAnimation,
+      builder: (context, child) {
+        return Transform.rotate(
+          angle: speed > 0 ? shakeAnimation.value : 0, // Apply rotation only if speed > 0
+          child: CustomPaint(
+            painter: SpeedometerPainter(speed: speed),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class SpeedometerPainter extends CustomPainter {
+  final double speed;
+
+  SpeedometerPainter({required this.speed});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = min(size.width, size.height) / 2;
+
+    // Draw speedometer outline
+    final paint = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawCircle(center, radius, paint);
+
+    // Draw speedometer needle
+    final needlePaint = Paint()
+      ..color = Colors.red
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.butt;
+
+    // Map speed (0-200) to angle (225 degrees to -45 degrees) for 0 at bottom
+    final angle = lerpDouble(225, -45, speed / 200)! * pi / 180;
+    final needleLength = radius * 0.75; // Reduced length to 75% of the radius
+    final needleEnd = Offset(
+      center.dx + needleLength * cos(-angle),
+      center.dy + needleLength * sin(-angle),
+    );
+    canvas.drawLine(center, needleEnd, needlePaint);
+
+    // Draw center dot
+    final centerDotPaint = Paint()..color = Colors.black;
+    canvas.drawCircle(center, 5, centerDotPaint);
+
+    // Draw number indicators
+    const int divisions = 10;
+    for (int i = 0; i <= divisions; i++) {
+      final value = i * 20; // Speedometer values from 0 to 200
+      final angle = lerpDouble(225, -45, i / divisions)! * pi / 180; // Degrees to radians
+
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: value.toString(),
+          style: const TextStyle(color: Colors.black, fontSize: 10),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout();
+
+      final textCenter = Offset(
+        center.dx + (radius * 0.8) * cos(-angle) - textPainter.width / 2, // Adjust the radius fraction for positioning
+        center.dy + (radius * 0.8) * sin(-angle) - textPainter.height / 2,
+      );
+      textPainter.paint(canvas, textCenter);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant SpeedometerPainter oldDelegate) {
+    return oldDelegate.speed != speed;
+  }
+
+  double lerpDouble(num a, num b, double t) {
+    return a + (b - a) * t;
   }
 }
