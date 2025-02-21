@@ -12,6 +12,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
         primaryColor: Colors.black,
@@ -42,9 +43,6 @@ class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProv
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
 
-  late AnimationController _carMoveController; // New AnimationController
-  late Animation<double> _carMoveAnimation; // New Animation
-
   @override
   void initState() {
     super.initState();
@@ -61,46 +59,12 @@ class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProv
 
     _shakeController.repeat(reverse: true);
 
-    // Car movement AnimationController
-    _carMoveController = AnimationController(
-      duration: const Duration(milliseconds: 500), // Adjust for desired speed
-      vsync: this,
-    );
-
-    _carMoveAnimation = Tween<double>(begin: 0, end: 5).animate(CurvedAnimation( // Adjust range as needed
-      parent: _carMoveController,
-      curve: Curves.linear,
-    ));
-
-    _carMoveController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _carMoveController.reverse();
-      } else if (status == AnimationStatus.dismissed) {
-        _carMoveController.forward();
-      }
-    });
   }
 
-    @override
-  void didUpdateWidget(covariant DistanceCalculator oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (speed > 0) {
-      if (!_shakeController.isAnimating) {
-          _shakeController.repeat(reverse: true);
-      }
-      if (!_carMoveController.isAnimating) { //added these
-         _carMoveController.forward(); //added these
-      }
-    } else {
-      _shakeController.stop();
-      _carMoveController.stop();
-    }
-  }
 
   @override
   void dispose() {
     _shakeController.dispose();
-    _carMoveController.dispose(); // Added dispose
     super.dispose();
   }
 
@@ -108,7 +72,7 @@ class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProv
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Recommended Distance Project'),
+        title: const Text('Recommended Safe Distance Project'),
         backgroundColor: const Color.fromRGBO(22, 31, 66, 1),
         elevation: 0,
       ),
@@ -151,13 +115,13 @@ class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProv
             ),
             const SizedBox(width: 40),
 
-            // Box with car in the middle AND Recommended Distance Display
+            // Box with car in the middle AND Recommended Safe Distance Display
             Expanded(
               child: Column(
                 children: [
                   const SizedBox(height: 20),
                   const Text(
-                    'Recommended Distance:',
+                    'Recommended Safe Distance:',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.w400, color: Colors.black),
                   ),
                   const SizedBox(height: 10),
@@ -196,36 +160,25 @@ class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProv
                           ),
 
                           // Back Car (Black) - now animated
-                           AnimatedBuilder(
-                            animation: _carMoveAnimation,
-                            builder: (context, child) {
-                              return Positioned(
-                                bottom: 100 + _carMoveAnimation.value, // Apply animation
+                           Positioned(
+                                bottom: 100,
                                 child: SvgPicture.asset(
                                   'media/car.svg',
                                   height: 80,
                                   width: 80,
                                   color: Colors.black,
                                 ),
-                              );
-                            },
-                          ),
-
+                              ),
                           // Front Car (Dark Blue) - now animated
-                          AnimatedBuilder(
-                            animation: _carMoveAnimation,
-                            builder: (context, child) {
-                              return Positioned(
-                                top: 100 + _carMoveAnimation.value, // Apply animation
+                          Positioned(
+                                top: 100,
                                 child: SvgPicture.asset(
                                   'media/car.svg',
                                   height: 80,
                                   width: 80,
                                   color: Colors.indigo[700],
                                 ),
-                              );
-                            },
-                          ),
+                              ),
                           // Text Box in the Middle
                           Positioned(
                             top: 300,
