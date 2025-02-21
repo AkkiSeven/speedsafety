@@ -8,7 +8,6 @@ void main() {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -28,39 +27,32 @@ class MyApp extends StatelessWidget {
 
 class DistanceCalculator extends StatefulWidget {
   const DistanceCalculator({super.key});
-
   @override
   // ignore: library_private_types_in_public_api
   _DistanceCalculatorState createState() => _DistanceCalculatorState();
 }
 
-class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProviderStateMixin {
+class _DistanceCalculatorState extends State<DistanceCalculator>
+    with TickerProviderStateMixin {
   double speed = 0;
   final double reactionTime = 2.5;
-
   double get recommendedDistance => speed * reactionTime;
-
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
-
   @override
   void initState() {
     super.initState();
-
     _shakeController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
-
-    _shakeAnimation = Tween<double>(begin: -0.01, end: 0.01).animate(CurvedAnimation(
+    _shakeAnimation =
+        Tween<double>(begin: -0.01, end: 0.01).animate(CurvedAnimation(
       parent: _shakeController,
       curve: Curves.easeInOut,
     ));
-
     _shakeController.repeat(reverse: true);
-
   }
-
 
   @override
   void dispose() {
@@ -108,13 +100,15 @@ class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProv
                   const SizedBox(height: 10),
                   Text(
                     '${speed.toStringAsFixed(0)} km/h',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w400, color: Colors.black),
+                    style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.black),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 40),
-
             // Box with car in the middle AND Recommended Safe Distance Display
             Expanded(
               child: Column(
@@ -122,15 +116,20 @@ class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProv
                   const SizedBox(height: 20),
                   const Text(
                     'Recommended Safe Distance:',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w400, color: Colors.black),
+                    style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.black),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     '${recommendedDistance.toStringAsFixed(2)} meters',
-                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w400, color: Colors.black),
+                    style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.black),
                   ),
                   const SizedBox(height: 20),
-
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
@@ -158,27 +157,26 @@ class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProv
                               color: Colors.grey[400],
                             ),
                           ),
-
                           // Back Car (Black) - now animated
-                           Positioned(
-                                bottom: 100,
-                                child: SvgPicture.asset(
-                                  'media/car.svg',
-                                  height: 80,
-                                  width: 80,
-                                  color: Colors.black,
-                                ),
-                              ),
+                          Positioned(
+                            bottom: 100,
+                            child: SvgPicture.asset(
+                              'media/car.svg',
+                              height: 80,
+                              width: 80,
+                              color: Colors.black,
+                            ),
+                          ),
                           // Front Car (Dark Blue) - now animated
                           Positioned(
-                                top: 100,
-                                child: SvgPicture.asset(
-                                  'media/car.svg',
-                                  height: 80,
-                                  width: 80,
-                                  color: Colors.indigo[700],
-                                ),
-                              ),
+                            top: 100,
+                            child: SvgPicture.asset(
+                              'media/car.svg',
+                              height: 80,
+                              width: 80,
+                              color: Colors.indigo[700],
+                            ),
+                          ),
                           // Text Box in the Middle
                           Positioned(
                             top: 300,
@@ -195,17 +193,18 @@ class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProv
                               ),
                             ),
                           ),
-                             // Analog Speedometer in the bottom right corner
+                          // Analog Speedometer in the bottom right corner
                           Positioned(
                             bottom: 300, // move down
                             right: 950, // move right
                             child: SizedBox(
                               width: 150, // increase size to 150
                               height: 150,
-                              child: AnalogSpeedometer(speed: speed, shakeAnimation: _shakeAnimation),
+                              child: AnalogSpeedometer(
+                                  speed: speed,
+                                  shakeAnimation: _shakeAnimation),
                             ),
                           ),
-
                         ],
                       ),
                     ),
@@ -223,16 +222,17 @@ class _DistanceCalculatorState extends State<DistanceCalculator> with TickerProv
 class AnalogSpeedometer extends StatelessWidget {
   final double speed;
   final Animation<double> shakeAnimation;
-
-  const AnalogSpeedometer({super.key, required this.speed, required this.shakeAnimation});
-
+  const AnalogSpeedometer(
+      {super.key, required this.speed, required this.shakeAnimation});
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: shakeAnimation,
       builder: (context, child) {
         return Transform.rotate(
-          angle: speed > 0 ? shakeAnimation.value : 0, // Apply rotation only if speed > 0
+          angle: speed > 0
+              ? shakeAnimation.value
+              : 0, // Apply rotation only if speed > 0
           child: CustomPaint(
             painter: SpeedometerPainter(speed: speed),
           ),
@@ -244,27 +244,22 @@ class AnalogSpeedometer extends StatelessWidget {
 
 class SpeedometerPainter extends CustomPainter {
   final double speed;
-
   SpeedometerPainter({required this.speed});
-
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = min(size.width, size.height) / 2;
-
     // Draw speedometer outline
     final paint = Paint()
       ..color = Colors.black
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
     canvas.drawCircle(center, radius, paint);
-
     // Draw speedometer needle
     final needlePaint = Paint()
       ..color = Colors.red
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.butt;
-
     // Map speed (0-200) to angle (225 degrees to -45 degrees) for 0 at bottom
     final angle = lerpDouble(225, -45, speed / 200)! * pi / 180;
     final needleLength = radius * 0.75; // Reduced length to 75% of the radius
@@ -273,17 +268,15 @@ class SpeedometerPainter extends CustomPainter {
       center.dy + needleLength * sin(-angle),
     );
     canvas.drawLine(center, needleEnd, needlePaint);
-
     // Draw center dot
     final centerDotPaint = Paint()..color = Colors.black;
     canvas.drawCircle(center, 5, centerDotPaint);
-
     // Draw number indicators
     const int divisions = 10;
     for (int i = 0; i <= divisions; i++) {
       final value = i * 20; // Speedometer values from 0 to 200
-      final angle = lerpDouble(225, -45, i / divisions)! * pi / 180; // Degrees to radians
-
+      final angle =
+          lerpDouble(225, -45, i / divisions)! * pi / 180; // Degrees to radians
       final textPainter = TextPainter(
         text: TextSpan(
           text: value.toString(),
@@ -292,9 +285,10 @@ class SpeedometerPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       );
       textPainter.layout();
-
       final textCenter = Offset(
-        center.dx + (radius * 0.8) * cos(-angle) - textPainter.width / 2, // Adjust the radius fraction for positioning
+        center.dx +
+            (radius * 0.8) * cos(-angle) -
+            textPainter.width / 2, // Adjust the radius fraction for positioning
         center.dy + (radius * 0.8) * sin(-angle) - textPainter.height / 2,
       );
       textPainter.paint(canvas, textCenter);
