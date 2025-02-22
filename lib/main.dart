@@ -34,11 +34,31 @@ class DistanceCalculator extends StatefulWidget {
 
 class _DistanceCalculatorState extends State<DistanceCalculator>
     with TickerProviderStateMixin {
-  double speed = 0;
-  final double reactionTime = 2.5;
-  double get recommendedDistance => speed * reactionTime;
+  double _speed = 0; // Private variable for the slider's current value
+  double speed = 0; // Public variable for the displayed speed and calculations
+  final double reactionTime = 2.5; // Reaction time in seconds
+  final double deceleration = 2.0; // Deceleration in m/s^2
+
+  double get recommendedDistance {
+    // Convert speed from km/h to m/s
+    double speedMs = speed * (5 / 18);
+
+    // Calculate reaction distance
+    double reactionDistance = speedMs * reactionTime;
+
+    // Calculate braking distance
+    double brakingDistance = (speedMs * speedMs) / (2 * deceleration);
+
+    // Calculate total stopping distance
+    double totalDistance = reactionDistance + brakingDistance;
+    return totalDistance;
+  }
+
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
+  late AnimationController _roadLineController;
+  late Animation<double> _roadLineAnimation;
+
   @override
   void initState() {
     super.initState();
@@ -52,16 +72,59 @@ class _DistanceCalculatorState extends State<DistanceCalculator>
       curve: Curves.easeInOut,
     ));
     _shakeController.repeat(reverse: true);
+
+    _roadLineController = AnimationController(
+      duration: const Duration(seconds: 2), // Adjust duration for speed
+      vsync: this,
+    );
+    _roadLineAnimation = Tween<double>(begin: 0, end: 1).animate(_roadLineController)
+      ..addListener(() {
+        setState(() {}); // Trigger rebuild on animation tick
+      });
+
+    _startStopRoadLineAnimation();
+  }
+
+  void _startStopRoadLineAnimation() {
+    if (speed > 0) {
+      // Adjust the animation duration based on speed
+      final animationDuration = 2 - (speed / 200) * 1.5; // Example: Reduce duration from 2s to 0.5s
+      _roadLineController.duration = Duration(milliseconds: (animationDuration * 1000).toInt());
+      _roadLineController.repeat();
+    } else {
+      _roadLineController.stop();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant DistanceCalculator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (speed != (oldWidget.key as ValueKey<double>?)?.value) {
+      _startStopRoadLineAnimation();
+    }
   }
 
   @override
   void dispose() {
     _shakeController.dispose();
+    _roadLineController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Convert speed from km/h to m/s
+    double speedMs = speed * (5 / 18);
+
+    // Calculate reaction distance
+    double reactionDistance = speedMs * reactionTime;
+
+    // Calculate braking distance
+    double brakingDistance = (speedMs * speedMs) / (2 * deceleration);
+
+    // Calculate total stopping distance
+    double totalDistance = reactionDistance + brakingDistance;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Recommended Safe Distance Project'),
@@ -84,12 +147,18 @@ class _DistanceCalculatorState extends State<DistanceCalculator>
                     child: RotatedBox(
                       quarterTurns: -1,
                       child: Slider(
-                        value: speed,
+                        value: _speed, // Use _speed for the slider's value
                         min: 0,
                         max: 200,
                         onChanged: (value) {
                           setState(() {
-                            speed = value;
+                            _speed = value; // Update _speed while dragging
+                          });
+                        },
+                        onChangeEnd: (value) {
+                          setState(() {
+                            speed = value; // Update speed only when released
+                            _startStopRoadLineAnimation(); // Update animation
                           });
                         },
                         activeColor: const Color.fromRGBO(22, 31, 66, 1),
@@ -99,7 +168,7 @@ class _DistanceCalculatorState extends State<DistanceCalculator>
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    '${speed.toStringAsFixed(0)} km/h',
+                    '${_speed.toStringAsFixed(0)} km/h', // Display _speed while dragging
                     style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w400,
@@ -164,7 +233,7 @@ class _DistanceCalculatorState extends State<DistanceCalculator>
                               'media/car.svg',
                               height: 80,
                               width: 80,
-                              color: Colors.black,
+                              colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn)
                             ),
                           ),
                           // Front Car (Dark Blue) - now animated
@@ -174,23 +243,58 @@ class _DistanceCalculatorState extends State<DistanceCalculator>
                               'media/car.svg',
                               height: 80,
                               width: 80,
-                              color: Colors.indigo[700],
+                              colorFilter: const ColorFilter.mode(Colors.indigo, BlendMode.srcIn)
                             ),
                           ),
-                          // Text Box in the Middle
+                          // Text Box in the Middle with Arrows
                           Positioned(
                             top: 300,
-                            child: Container(
-                              padding: const EdgeInsets.all(8.0),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(8.0),
-                                border: Border.all(color: Colors.black),
-                              ),
-                              child: Text(
-                                '${recommendedDistance.toStringAsFixed(2)} meters',
-                                style: const TextStyle(fontSize: 16),
-                              ),
+                            child: Column(
+                              children: [const Icon(
+                                    Icons.arrow_upward,
+                                    color: Colors.black,
+                                    size: 30, // Adjust size as needed
+                                  ),
+                                Container(
+                                  padding: const EdgeInsets.all(8.0),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8.0),
+                                    border: Border.all(color: Colors.black),
+                                  ),
+                                  child: Text(
+                                    '${recommendedDistance.toStringAsFixed(2)} meters',
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                                const Icon(
+                                    Icons.arrow_downward,
+                                    color: Colors.black,
+                                    size: 30, // Adjust size as needed
+                                  ),
+                              ],
+                            ),
+                          ),
+                          // Math Display (Top Left)
+                          Positioned(
+                            top: 10,
+                            left: 10,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Speed: ${speed.toStringAsFixed(2)} km/h',
+                                  style: const TextStyle(fontSize: 15, color: Colors.black),
+                                ),
+                                Text(
+                                  'Reaction Time: ${reactionTime.toStringAsFixed(2)} s',
+                                  style: const TextStyle(fontSize: 15, color: Colors.black),
+                                ),
+                                Text(
+                                  'Deceleration: ${deceleration.toStringAsFixed(2)} m/s²',
+                                  style: const TextStyle(fontSize: 15, color: Colors.black),
+                                ),
+                              ],
                             ),
                           ),
                           // Analog Speedometer in the bottom right corner
@@ -205,6 +309,19 @@ class _DistanceCalculatorState extends State<DistanceCalculator>
                                   shakeAnimation: _shakeAnimation),
                             ),
                           ),
+                          // Road Lines
+                          AnimatedBuilder(
+                            animation: _roadLineAnimation,
+                            builder: (context, child) {
+                              return CustomPaint(
+                                painter: RoadLinePainter(
+                                  animationValue: _roadLineAnimation.value,
+                                  speed: speed,
+                                ),
+                                size: const Size(220, double.infinity), // Road width and height
+                              );
+                            },
+                          ),
                         ],
                       ),
                     ),
@@ -216,6 +333,56 @@ class _DistanceCalculatorState extends State<DistanceCalculator>
         ),
       ),
     );
+  }
+}
+
+class RoadLinePainter extends CustomPainter {
+  final double animationValue;
+  final double speed;
+
+  RoadLinePainter({required this.animationValue, required this.speed});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final roadWidth = size.width;
+    final roadHeight = size.height;
+    const lineHeight = 20.0; // Height of each line
+    const lineSpacing = 80.0; // Spacing between lines
+    final lineYOffset = animationValue * lineSpacing; // Animated offset
+
+    final paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    // Draw lines on the left and right sides of the road
+    for (double y = lineYOffset; y < roadHeight; y += lineSpacing) {
+      // Left side
+      canvas.drawRect(
+        Rect.fromLTWH(
+          roadWidth * 0.15, // Adjust horizontal position
+          y % roadHeight,
+          5, // Line width
+          lineHeight,
+        ),
+        paint,
+      );
+
+      // Right side
+      canvas.drawRect(
+        Rect.fromLTWH(
+          roadWidth * 0.8, // Adjust horizontal position
+          y % roadHeight,
+          5, // Line width
+          lineHeight,
+        ),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant RoadLinePainter oldDelegate) {
+    return oldDelegate.animationValue != animationValue || oldDelegate.speed != speed;
   }
 }
 
@@ -261,7 +428,7 @@ class SpeedometerPainter extends CustomPainter {
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.butt;
     // Map speed (0-200) to angle (225 degrees to -45 degrees) for 0 at bottom
-    final angle = lerpDouble(225, -45, speed / 200)! * pi / 180;
+    final angle = lerpDouble(225, -45, speed / 200) * pi / 180;
     final needleLength = radius * 0.75; // Reduced length to 75% of the radius
     final needleEnd = Offset(
       center.dx + needleLength * cos(-angle),
@@ -276,7 +443,7 @@ class SpeedometerPainter extends CustomPainter {
     for (int i = 0; i <= divisions; i++) {
       final value = i * 20; // Speedometer values from 0 to 200
       final angle =
-          lerpDouble(225, -45, i / divisions)! * pi / 180; // Degrees to radians
+          lerpDouble(225, -45, i / divisions) * pi / 180; // Degrees to radians
       final textPainter = TextPainter(
         text: TextSpan(
           text: value.toString(),
